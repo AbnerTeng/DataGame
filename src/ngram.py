@@ -14,24 +14,32 @@ class NGram:
     def __init__(self, dataset_path: str, n: int, num_generate: int=5) -> None:
         self.n = n
         self.num_generate = num_generate
+        self.train_data = pd.read_parquet("data\label_train_source.parquet")
+        self.train_result = pd.read_parquet("data\label_train_target.parquet")
         self.first20 = pd.read_parquet(dataset_path)
         self.session_group = self.first20.groupby('session_id')
         self.unique_sessions = list(self.session_group.groups.keys())
         self.all_songs = self.first20['song_id'].tolist()
         self.most_popular_song = Counter(self.all_songs).most_common()[0][0]
 
+    def songlist_split(self, df:pd.DataFrame) -> list:
+        songlist = df.groupby("session_id")["song_id"].apply(list).tolist()
+        songlist_split = []
+        for i in range(len(songlist)):
+            songlist_split +=  songlist[i]
+            songlist_split.extend(["na"] * (self.n-1))
+        return songlist_split
 
     def find_ngrams(self) -> dict[tuple, list]:
         """
         get ngrams from all songs
         """
+        songlist = self.songlist_split(self.train_data)+self.songlist_split(self.first20)
         ngrams = defaultdict(list)
-        for i in range(len(self.all_songs) - self.n + 1):
-            ngram_key = tuple(self.all_songs[i: i + self.n - 1])
-            if i + self.n < len(self.all_songs):
-                ngrams[ngram_key].append(self.all_songs[i + self.n])
-            else:
-                print("Warning: last ngram is not complete")
+        for i in range(len(songlist) - self.n + 1):
+            ngram_key = tuple(songlist[i: i + self.n - 1])
+            if i + self.n < len(songlist) and songlist[i + self.n-1] not in songlist[i: i + self.n - 1] and songlist[i + self.n-1] != "na":
+                ngrams[ngram_key].append(songlist[i + self.n - 1])
         return ngrams
 
 
