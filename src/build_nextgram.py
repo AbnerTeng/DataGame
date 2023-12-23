@@ -33,7 +33,7 @@ class NGram2(NGram):
             session_song = self.session_group.get_group(session_id)['song_id'].tolist()
             counter = self.count_ngrams(session_song, bynumber)
             for key, value in counter.items():
-                data.append((session_song[-1:][0], key, value))
+                data.append((session_song[-bynumber:][0], key, value))
         df = pd.DataFrame(data, columns=['song_id', f'next{bynumber}_songs','count'])
 
         df.to_parquet(csv_file_path, index=False)
