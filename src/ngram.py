@@ -20,7 +20,8 @@ class NGram:
         self.session_group = self.first20.groupby('session_id')
         self.unique_sessions = list(self.session_group.groups.keys())
         self.all_songs = self.first20['song_id'].tolist()
-        self.most_popular_song = Counter(self.all_songs).most_common()[0][0]
+        self.most_popular_song = [song_name for song_name, _ in Counter(self.all_songs).most_common()]
+        self.count = -1
 
     def songlist_split(self, df:pd.DataFrame) -> list:
         songlist = df.groupby("session_id")["song_id"].apply(list).tolist()
@@ -53,7 +54,8 @@ class NGram:
             elif len(set(session)) > 5:
                 most_common = Counter(ngrams[tuple(session[-self.n+1: ])]).most_common()[0][0]
         else:
-            most_common = self.most_popular_song
+            most_common = self.most_popular_song[self.count]
+            self.count -= 1
         return most_common
 
 
