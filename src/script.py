@@ -1,18 +1,25 @@
 # %%
 import pandas as pd
-from tqdm import tqdm
 # %%
-test = pd.read_parquet('../data/label_test_source.parquet')
+train_source = pd.read_parquet("../data/label_train_source.parquet")
+train_target = pd.read_parquet("../data/label_train_target.parquet")
+test_source = pd.read_parquet("../data/label_test_source.parquet")
 # %%
-session_id = test['session_id'].unique()
-session_grp = test.groupby('session_id')
+print(f"train source shape: {train_source.shape}")
+print(f"train target shape: {train_target.shape}")
+print(f"test source shape: {test_source.shape}")
 # %%
-lst = []
-for session in tqdm(session_id):
-    session_song = session_grp.get_group(session)['song_id'].unique().tolist()
-    lst.append(len(session_song))
-# %%
-import matplotlib.pyplot as plt
-# %%
-plt.hist(lst, bins=100)
+import numpy as np
+song = np.array(train_source.song_id)
+song = song.reshape(
+    (
+        len(song) // 20, 20
+    )
+).tolist()
+song = pd.DataFrame(
+    {
+        'song_seq': song
+    }
+)
+song.song_seq = song.song_seq.apply(lambda x: ", ".join(x))
 # %%
