@@ -7,6 +7,7 @@ import argparse
 import sweetviz
 from .utils import load_data
 
+
 class EDA:
     """
     EDA session
@@ -23,15 +24,17 @@ class EDA:
         report.show_html()
 
 
-if __name__ == "__main__":
-    def arguments() -> argparse.ArgumentParser:
-        """
-        Get arguments
-        """
-        parser = argparse.ArgumentParser(description="Get EDA report")
-        parser.add_argument("--path", type=str, help="path to data")
-        return parser.parse_args()
+def arguments() -> argparse.ArgumentParser:
+    """
+    Get arguments
+    """
+    parser = argparse.ArgumentParser(description="Get EDA report")
+    parser.add_argument("--path", type=str, help="path to data")
+    return parser.parse_args()
 
+
+if __name__ == "__main__":
     args = arguments()
     eda = EDA(args.path)
-    eda.get_report()
+    print(eda.data.head())
+    #eda.get_report()

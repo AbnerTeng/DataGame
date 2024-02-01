@@ -1,0 +1,7 @@
+pyarrow
+pandas
+sweetviz
+numpy
+sklearn
+lightgbm
+scipy
