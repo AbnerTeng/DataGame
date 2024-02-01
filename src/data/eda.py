@@ -5,7 +5,7 @@ sweetviz official document: https://pypi.org/project/sweetviz/
 """
 import argparse
 import sweetviz
-from .utils import load_data
+from ..utils.data_utils import load_data
 
 
 class EDA:
