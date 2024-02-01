@@ -14,50 +14,78 @@ class NGram:
     def __init__(self, dataset_path: str, n: int, num_generate: int=5) -> None:
         self.n = n
         self.num_generate = num_generate
+        self.train_data = pd.read_parquet("data\label_train_source.parquet")
+        self.train_result = pd.read_parquet("data\label_train_target.parquet")
         self.first20 = pd.read_parquet(dataset_path)
         self.session_group = self.first20.groupby('session_id')
         self.unique_sessions = list(self.session_group.groups.keys())
         self.all_songs = self.first20['song_id'].tolist()
-        self.most_popular_song = Counter(self.all_songs).most_common()[0][0]
+        self.most_popular_song = [song_name for song_name, _ in Counter(self.all_songs).most_common()]
+        self.count = -1
+        self.next_ngrams = []
 
+    def songlist_split(self, df:pd.DataFrame) -> list:
+        songlist = df.groupby("session_id")["song_id"].apply(list).tolist()
+        songlist_split = []
+        for i in range(len(songlist)):
+            songlist_split +=  songlist[i]
+            songlist_split.extend(["na"] * (self.n-1))
+        return songlist_split
 
-    def find_ngrams(self) -> dict[tuple, list]:
+    def find_ngrams(self, next: int=1) -> dict[tuple, list]:
         """
         get ngrams from all songs
         """
         ngrams = defaultdict(list)
-        for i in range(len(self.all_songs) - self.n + 1):
-            ngram_key = tuple(self.all_songs[i: i + self.n - 1])
-            if i + self.n < len(self.all_songs):
-                ngrams[ngram_key].append(self.all_songs[i + self.n])
-            else:
-                print("Warning: last ngram is not complete")
+        for i in range(len(self.songlist)-next):
+            ngram_key = tuple(self.songlist[i:i+1])
+            if i + next < len(self.songlist) and self.songlist[i+next] not in self.songlist[i] and self.songlist[i+next] != "na":
+                ngrams[ngram_key].append(self.songlist[i+next])
         return ngrams
 
+    def build_ngrams(self,bynumber:int=1):
+        self.bynumber = bynumber
+        for i in tqdm(range(1,bynumber+1)):
+            print(f"\nBuilding next{i}_bigrams")
+            result = self.find_ngrams(i)
+            self.next_ngrams.append(result)
 
-    def count_ngrams(self, session: list, ngrams: dict) -> str:
+
+    def count_ngrams(self, session: list, bynumber: int=1) -> str:
         """
         count ngrams
         """
-        if ngrams[tuple(session[-self.n+1: ])] != []:
-            if len(set(session)) <= 5:
+        counter = Counter(self.next_ngrams[0][tuple(session[-1:])])
+        if bynumber > 1:
+            for i in range(1, bynumber):
+                counter.update(self.next_ngrams[i][tuple(session[-1-i:-i])])
+
+        if self.next_ngrams[0][tuple(session[-1: ])] != []:
+            if len(set(session)) <= self.num_generate:
                 most_common = Counter(session).most_common()[0][0]
-            elif len(set(session)) > 5:
-                most_common = Counter(ngrams[tuple(session[-self.n+1: ])]).most_common()[0][0]
+            elif len(set(session)) > self.num_generate:
+                most_common = counter.most_common()[0][0]
         else:
-            most_common = self.most_popular_song
+            most_common = self.most_popular_song[self.count]
+            self.count -= 1
         return most_common
 
 
-    def iterate(self, session: list, ngrams: dict) -> list:
+    def iterate(self, session: list,  bynumber: int=1) -> list:
         """
         generate 5 songs iteratively
         """
         generate_lst = []
         for _ in range(self.num_generate):
-            most_common = self.count_ngrams(session, ngrams)
+            most_common = self.count_ngrams(session,bynumber)
             session = session[1:] + [most_common]
             generate_lst.append(most_common)
+        
+        #replace repeat like ABABA with coverage
+        generate_lst = list(set(generate_lst))
+        while len(generate_lst) < self.num_generate:
+            generate_lst.append(self.most_popular_song[self.count])
+            self.count -= 1
         return generate_lst
 
 
@@ -138,8 +166,9 @@ if __name__ == "__main__":
         'data/label_test_source.parquet',
         n=args.n
     )
-    ngrams_opt = rec.find_ngrams()
-    data = rec.merge_with_session_id(ngrams_opt)
+    bynumber = 5
+    rec.build_ngrams(bynumber)
+    data = rec.merge_with_session_id(bynumber)
     data = rec.join_with_sample('data/sample.csv', data)
     data.to_csv(f'data/sub_{num2str(args.n)}gram.csv', index=False)
     print(f"sub_{num2str(args.n)}gram.csv is saved")
