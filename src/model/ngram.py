@@ -14,34 +14,44 @@ class NGram:
     def __init__(self, dataset_path: str, n: int, num_generate: int=5) -> None:
         self.n = n
         self.num_generate = num_generate
-        self.train_data = pd.read_parquet("data\label_train_source.parquet")
-        self.train_result = pd.read_parquet("data\label_train_target.parquet")
+        self.train_data = pd.read_parquet("data/label_train_source.parquet")
+        self.train_result = pd.read_parquet("data/label_train_target.parquet")
         self.first20 = pd.read_parquet(dataset_path)
         self.session_group = self.first20.groupby('session_id')
         self.unique_sessions = list(self.session_group.groups.keys())
         self.all_songs = self.first20['song_id'].tolist()
-        self.most_popular_song = [song_name for song_name, _ in Counter(self.all_songs).most_common()]
+        self.most_popular_song = [
+            song_name for song_name, _ in Counter(self.all_songs).most_common()
+        ]
         self.count = -1
         self.next_ngrams = []
 
+
     def songlist_split(self, df:pd.DataFrame) -> list:
-        songlist = df.groupby("session_id")["song_id"].apply(list).tolist()
+        """
+        split songlist
+        """
+        self.songlist = df.groupby("session_id")["song_id"].apply(list).tolist()
         songlist_split = []
-        for i in range(len(songlist)):
-            songlist_split +=  songlist[i]
+        for _, song in enumerate(self.songlist):
+            songlist_split += song
             songlist_split.extend(["na"] * (self.n-1))
         return songlist_split
 
-    def find_ngrams(self, next: int=1) -> dict[tuple, list]:
+
+    def find_ngrams(self, _next: int=1) -> dict[tuple, list]:
         """
         get ngrams from all songs
         """
         ngrams = defaultdict(list)
-        for i in range(len(self.songlist)-next):
-            ngram_key = tuple(self.songlist[i:i+1])
-            if i + next < len(self.songlist) and self.songlist[i+next] not in self.songlist[i] and self.songlist[i+next] != "na":
-                ngrams[ngram_key].append(self.songlist[i+next])
+        for i in range(len(self.songlist) - _next):
+            ngram_key = tuple(self.songlist[i: i+1])
+            if (i + _next < len(self.songlist)) \
+                and (self.songlist[i + _next] not in self.songlist[i]) \
+                and self.songlist[i + _next] != "na":
+                ngrams[ngram_key].append(self.songlist[i + _next])
         return ngrams
+
 
     def build_ngrams(self,bynumber:int=1):
         self.bynumber = bynumber
@@ -80,7 +90,7 @@ class NGram:
             most_common = self.count_ngrams(session,bynumber)
             session = session[1:] + [most_common]
             generate_lst.append(most_common)
-        
+
         #replace repeat like ABABA with coverage
         generate_lst = list(set(generate_lst))
         while len(generate_lst) < self.num_generate:
@@ -166,9 +176,9 @@ if __name__ == "__main__":
         'data/label_test_source.parquet',
         n=args.n
     )
-    bynumber = 5
-    rec.build_ngrams(bynumber)
-    data = rec.merge_with_session_id(bynumber)
+    BYNUMBER = 5
+    rec.build_ngrams(BYNUMBER)
+    data = rec.merge_with_session_id(BYNUMBER)
     data = rec.join_with_sample('data/sample.csv', data)
     data.to_csv(f'data/sub_{num2str(args.n)}gram.csv', index=False)
     print(f"sub_{num2str(args.n)}gram.csv is saved")
