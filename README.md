@@ -1,6 +1,6 @@
-# DataGame
+## Sequential Recommendation
 
-Web Search and Mining final project
+Sequential Recommendation system for song based on traditional statistical language model (NGram, SkipGram), Neural Network Language Model (Gated Recurrent Unit), and LLM (T5)
 
 ## Module Structure
 
@@ -38,3 +38,7 @@ eda.sh
 ```
 
 Preliminary and incomplete
+
+- Stats LM: Need to Refactor
+- NNLM: Developing
+- LLM: Need to Refactor
